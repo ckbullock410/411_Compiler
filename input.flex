@@ -3,9 +3,17 @@
 	Akal
 	CPSC411 Assignment #1	
 */
+#include <stdio.h>
+
+int lineNumber = 0;
+int parenthOpen = 0;
+int braceOpen = 0;
+int bracketOpen = 0;
+bool commentOpen = 0;
+
 %}
-BOOL	bool
-INT	int
+BOOL	"bool"
+INT	"int"
 ELSE	else
 NOT	not
 RET	return
@@ -37,10 +45,18 @@ CLOSEBRACE	\}
 OPENCOMM	\/\*
 CLOSECOMM	\*\/
 DIGIT	[0-9]
-NUM	DIGIT+
+NUM	{DIGIT}+
 LETTER	[A-Z]|[a-z]
-ID	LETTER+
+ID	{LETTER}+
+NEWLINE	\\n
 %%
-
+NEWLINE	\\n
+UNIDENTIFIED	.*
 %%
-
+{NEWLINE} {lineNumber++;}
+<<EOF>>	{yyterminate();}
+%%
+int main(){
+	yylex();
+	return 0;
+}
