@@ -1,6 +1,6 @@
 %{
-/*	Chandler Bullock
-	Akal
+/*	Chandler Bullock 10160618
+	Akal Sangha 10106725
 	CPSC411 Assignment #1	
 */
 #include <stdio.h>
