@@ -1,6 +1,6 @@
 %{
-/*	Chandler Bullock 10160618
-	Akal Sangha 10106725
+/*	Chandler Bullock
+	Akal
 	CPSC411 Assignment #1	
 */
 #include <stdio.h>
@@ -110,7 +110,7 @@ void printToken(enum TokenType token){
 			text = " special symbol: ";
 			break;
 		case ERROR:
-			text = "ERROR: ";
+			text = " ERROR: ";
 			break;
 		default:
 			text = " Something went wrong, unclassified token";
@@ -123,13 +123,12 @@ int main(int argc, char** argv){
 	FILE *readFrom;
 	if (argc == 2){
 		readFrom = fopen(argv[1],"r");
+		fprintf(output, "C- COMPILATION: %s\n", argv[1]);
 	} else{
 		readFrom = fopen("input.cm", "r");
+		fprintf(output, "C- COMPILATION: input.cm\n");
 	}
 	yyin = readFrom;
-
-	/*print the initial line indicating the compiled source file name*/
-	fprintf(output, "C- COMPILATION: test.cm\n");
 
 	token = yylex();
 	while (token != END){
