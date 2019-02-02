@@ -88,7 +88,7 @@ UNIDENTIFIED	.
 {WSPACE}	{/*do nothing*/}
 {NEWLINE} 	{lineNumber++;}
 {OPENCOMM}	{commentOpen = 1;}
-{CLOSECOMM}	{commentOpen = 0;}
+{CLOSECOMM}	{if (commentOpen == 1){commentOpen = 0;} else {fprintf(output,"%d: Unmatched */\n", lineNumber);}}
 {UNIDENTIFIED}	{return ERROR;}
 <<EOF>>		{return END;}
 %%
