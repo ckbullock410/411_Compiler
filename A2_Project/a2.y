@@ -4,16 +4,35 @@
 #include "scan.h"
 #include "parse.h"
 #define YYPARSER
-#define YYSTYPE int
+
+/*
+----- TODO's -----
+need to possibly lable tokens as %left or %right not sure
+
+input all the CFG rules as bison code
+*/
+
 %}
-%token BOOL INT ELSE NOT RET TRUE FALSE VOID WHILE
+%token BOOL IF ELSE WHILE RETURN TRUE FALSE VOID INT NOT
 %token ID NUM
-%token PLUS MINUS STAR SLASH LT GT LTE GTE EQ NOTEQ ASSIGN AND OR SEMI COMMA OPENP CLOSEP OPENB CLOSEB OPENBRACE CLOSEBRACE OPENCOMM CLOSECOMM
+%token ASSIGN NQ EQ LT GT LE GE AND OR PLUS MINUS TIMES OVER LPAREN RPAREN SEMI COMMA LBRACK RBRACK LCBRACK RCBRACK
 %token ERROR
 %%
-program: declaration-list;
-declaration-list: d
+program				: 	declaration-list
+						{savedTree = $1;};
+declaration-list	:	declaration-list declaration
+					|	declaration;
+declaration 		:	var-declaration
+					|	fun-declaration;
+
+
 %%
+
+// 		FILL IN RULES RIGHT ABOVE THESE %%
+//*********************************************
+//*********************************************
+//********************************************
+
 
 /* ------------ C CODE ----------------- */
 
