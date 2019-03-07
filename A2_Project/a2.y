@@ -19,20 +19,102 @@ input all the CFG rules as bison code
 %token ERROR
 %%
 program				: 	declaration-list
-						{savedTree = $1;};
+						{savedTree = $1;}
+					;
 declaration-list	:	declaration-list declaration
-					|	declaration;
+					|	declaration
+					;
 declaration 		:	var-declaration
-					|	fun-declaration;
+					|	fun-declaration
+					;
+var-declaration		:	type-specifier ID SEMI
+					|	type-specifier ID LBRACK NUM RBRACK SEMI
+					;
+type-specifier		: 	INT 
+					| 	VOID
+					;
+fun-declaration 	:	type-specifier ID LPAREN params RPAREN compound-stmt;
+params				:	param-list
+					|	VOID
+					;
+param-list			:	param-list COMMA param
+					|	param
+					;
+param 				:	type-specifier ID
+					|	type-specifier ID LBRACK RBRACK
+					;
+compound-stmt		:	LCBRACK local-declarations var-declaration
+					|	empty
+					;
+local-declarations 	:	local-declarations var-declaration
+					|	empty
+					;
+statement-list		:	statement-list statement
+					|	empty
+					;
+statement 			: 	expression-stmt
+					| 	compound-stmt
+					|	selection-stmt
+					|	iteration-stmt
+					|	return-stmt
+					;
+expression-stmt		:	expression SEMI
+					|	SEMI
+					;
+selection-stmt		:	IF LPAREN expression RPAREN statement
+					|	IF LPAREN expression RPAREN statement ELSE statement
+					;
+iteration-stmt		:	WHILE LPAREN expression RPAREN statement
+					;
+return-stmt			:	RETURN SEMI
+					| 	RETURN expression SEMI
+					;
+expression 			:	var ASSIGN expression
+					| 	simple-expression
+					;
+var 				: 	ID
+					| 	ID LBRACK expression RBRACK
+					;
+simple-expression 	: 	additive-expression relop additive-expression
+					| 	additive-expression
+					;				
+relop				: 	LE
+					|	LT
+					|	GT
+					|	GE
+					|	EQ
+					|	NQ
+					;
+additive-expression :	additive-expression addop term
+					|	term
+					;
+addop 				:	PLUS
+					|	MINUS
+					;
+term				:	term mulop factor
+					| 	factor
+					;
+mulop				:	TIMES
+					| 	OVER
+					;
+factor				:	LPAREN expression RPAREN
+					|	var
+					|	call
+					|	NUM
+					;
+call				:	ID LPAREN args RPAREN
+					;
+args				:	arg-list
+					|	empty
+					;
+args-list			:	arg-list COMMA expression
+					|	expression
+					;					
+
+
 
 
 %%
-
-// 		FILL IN RULES RIGHT ABOVE THESE %%
-//*********************************************
-//*********************************************
-//********************************************
-
 
 /* ------------ C CODE ----------------- */
 
