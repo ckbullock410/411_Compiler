@@ -1,15 +1,28 @@
 %{
+
 #include "globals.h"
 #include "util.h"
 #include "scan.h"
 #include "parse.h"
+
 #define YYPARSER
+#define YYSTYPE TreeNode *
+
+static char * savedName; 
+static int holdNum;
+static char *
+
+static int paramCounter = 0;
+static int localCounter = 0;
+static int currentlyGlobal = 1; 
 
 /*
------ TODO's -----
-need to possibly lable tokens as %left or %right not sure
-
-input all the CFG rules as bison code
+---------- TO DO LIST ------------
+Figure out how parameters are going to work
+Initialize all the semantic variables at the right times
+Finish the last couple rule actions
+FTP over to linux and figure out how to build
+debug
 */
 
 %}
@@ -19,77 +32,195 @@ input all the CFG rules as bison code
 %token ERROR
 %%
 program				: 	declaration-list
-						{savedTree = $1;}
+						{
+							savedTree = $1;
+						}
 					;
-declaration-list	:	declaration-list declaration
-					|	declaration
+declaration-list	:	declaration-list declaration 
+					{  
+						YYSTYPE t = $1;
+                   		if (t != NULL){
+                   			while (t->sibling != NULL)
+                        		t = t->sibling;
+                     		t->sibling = $2;
+                     		$$ = $1; }
+                     	else $$ = $2;
+	            	}
+					|	declaration {$$ = $1}
 					;
-declaration 		:	var-declaration
-					|	fun-declaration
+declaration 		:	var-declaration {$$ = $1}
+					|	fun-declaration {$$ = $1}
 					;
-var-declaration		:	type-specifier ID SEMI
-					|	type-specifier ID LBRACK NUM RBRACK SEMI
+var-declaration		:	type-specifier ID {savedName = copyString(tokenString);} SEMI {
+						$$ = newDecNode(VarK);
+						$$ -> lineno = lineno;
+						$$ -> type = $1
+						$$ -> attr.name = savedName;
+					}
+					|	type-specifier ID {savedName = copyString(tokenString);}
+						 LBRACK NUM{holdNum = atoi(tokenString);} RBRACK SEMI 
+					{
+						$$ = newDecNode(VarK);
+						$$ -> isArray = 1;
+						$$ -> arraySize = 
+						$$ -> lineno = lineno;
+						$$ -> type = $1
+						$$ -> attr.value = holdNum
+						$$ -> attr.name = savedName;
+					}
 					;
-type-specifier		: 	INT 
-					| 	VOID
+type-specifier		: 	INT {$$ = Integer;}
+					| 	VOID {$$ = Void}
 					;
-fun-declaration 	:	type-specifier ID LPAREN params RPAREN compound-stmt;
-params				:	param-list
-					|	VOID
+fun-declaration 	:	type-specifier ID {savedName = copyString(tokenString);} LPAREN params RPAREN
+					{
+						$$ = newDecNode(FunK);
+						$$ -> name = savedName;
+						$$ -> type = $1;
+						$$ -> child[0] = $5;
+						$$ -> child[1] = $7;
+					}
 					;
-param-list			:	param-list COMMA param
-					|	param
+params				:	param-list {$$ = $1}
+					|	VOID {$$ = Void}
+					;
+param-list			:	param-list COMMA param {}
+					|	param {}
 					;
 param 				:	type-specifier ID
+					{
+						$$ = new
+					}
 					|	type-specifier ID LBRACK RBRACK
 					;
-compound-stmt		:	LCBRACK local-declarations var-declaration
+compound-stmt		:	LCBRACK local-declarations statement-list RCBRACK
+					{
+						$$ = newStmtNode(CompoundK);
+						$$ -> child[0] = $2;
+						$$ -> child[1] = $3
+					}
 					|	empty
 					;
-local-declarations 	:	local-declarations var-declaration
+local-declarations 	:	local-declarations var-declaration 
+					{  
+						YYSTYPE t = $1;
+                   		if (t != NULL){
+                   			while (t->sibling != NULL)
+                        		t = t->sibling;
+                     		t->sibling = $2;
+                     		$$ = $1; }
+                     	else $$ = $2;
+		            }
 					|	empty
 					;
 statement-list		:	statement-list statement
+					{  
+						YYSTYPE t = $1;
+                   		if (t != NULL){
+                   			while (t->sibling != NULL)
+                        		t = t->sibling;
+                     		t->sibling = $2;
+                     		$$ = $1; }
+                     	else $$ = $2;
+		            }
 					|	empty
 					;
-statement 			: 	expression-stmt
-					| 	compound-stmt
-					|	selection-stmt
-					|	iteration-stmt
-					|	return-stmt
+statement 			: 	expression-stmt {$$ = $1;}
+					| 	compound-stmt {$$ = $1;}
+					|	selection-stmt {$$ = $1;}
+					|	iteration-stmt {$$ = $1;}
+					|	return-stmt {$$ = $1;}
 					;
-expression-stmt		:	expression SEMI
-					|	SEMI
+expression-stmt		:	expression SEMI {$$ = $1;}
+					|	SEMI 
 					;
-selection-stmt		:	IF LPAREN expression RPAREN statement
+selection-stmt		:	IF LPAREN expression RPAREN statement 
+					{
+						$$ = newStmtNode(IfK);
+						$$ -> lineno = lineno;
+						$$ -> child[0] = $3;
+						$$ -> child[1] = $5;
+					}
 					|	IF LPAREN expression RPAREN statement ELSE statement
+					{
+						$$ = newStmtNode(IfK);
+						$$ -> lineno = lineno;
+						$$ -> child[0] = $3;
+						$$ -> child[1] = $5;
+						$$ -> child[2] = $7;
+					}
 					;
 iteration-stmt		:	WHILE LPAREN expression RPAREN statement
+					{
+						$$ = newStmtNode(WhileK);
+						$$ -> lineno = lineno;
+						$$ -> child[0] = $3;
+						$$ -> child[1] = $5;
+					}
 					;
 return-stmt			:	RETURN SEMI
+					{
+						$$ = newStmtNode(ReturnK);
+						$$ -> lineno = lineno;
+					}
 					| 	RETURN expression SEMI
+					{
+						$$ = newStmtNode(ReturnK);
+						$$ -> lineno = lineno;
+						$$ -> child[0] = $2;
+					}
 					;
 expression 			:	var ASSIGN expression
-					| 	simple-expression
+					{
+						$$ = newExpNode(AssignK);
+						$$ -> child[0] = $1;
+						$$ -> child[1] = $3;
+					}
+					| 	simple-expression {$$ = $1;}
 					;
-var 				: 	ID
-					| 	ID LBRACK expression RBRACK
+var 				: 	ID 
+						{
+							$$ = newExpNode(IdK);
+							$$ -> lineno = lineno;
+							$$ -> name = copyString(tokenString);
+						}
+					| 	ID {savedName = copyString(tokenString);} LBRACK expression RBRACK
+						{
+							$$ = newExpNode(IdK);
+							$$ -> lineno = lineno;
+							$$ -> name = savedName;
+							$$ -> child[0] = $4;
+						}
 					;
 simple-expression 	: 	additive-expression relop additive-expression
-					| 	additive-expression
+					{
+						$$ = newExpNode(Opk);
+						$$ -> attr.op = $2;
+						$$ -> lineno = lineno;
+						$$ -> child[0] = $1;
+						$$ -> child[1] = $3;
+					}
+					| 	additive-expression {$$ = $1;}
 					;				
-relop				: 	LE
-					|	LT
-					|	GT
-					|	GE
-					|	EQ
-					|	NQ
+relop				: 	LE {$$ = LE;}
+					|	LT {$$ = LT;}
+					|	GT {$$ = GT;}
+					|	GE {$$ = GE;}
+					|	EQ {$$ = EQ;}
+					|	NQ {$$ = NQ;}
 					;
 additive-expression :	additive-expression addop term
-					|	term
+					{
+						$$ = newExpNode(OpK);
+						$$ -> lineno = lineno;
+						$$ -> attr.op = $2;
+						$$ -> child[0] = $1;
+						$$ -> child[1] = $3;
+					}
+					|	term {$$ = $1}
 					;
-addop 				:	PLUS
-					|	MINUS
+addop 				:	PLUS {$$ = PLUS;}
+					|	MINUS {$$ = MINUS;}
 					;
 term				:	term mulop factor
 					| 	factor
@@ -109,7 +240,8 @@ args				:	arg-list
 					;
 args-list			:	arg-list COMMA expression
 					|	expression
-					;					
+					;	
+empty				: '' {$$ = NULL};				
 
 
 

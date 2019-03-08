@@ -9,6 +9,7 @@
 #include "scan.h"
 
 int commentOpen = 0;
+char tokenString[MAXTOKENLEN+1]
 %}
 digit       [0-9]
 number      {digit}+
@@ -63,13 +64,15 @@ UNIDENTIFIED	.
 
 
 TokenType getToken(int firstTime){
+	TokenType token;
 	if (firstTime){
 	   firstTime = FALSE;
 	   lineno++;
 	   yyin = source;
 	   yyout = listing;
 	}
-	tokenString = yytext;	//might cause an error, but export attr value to global var
+	token = yylex();
+	strncpy(tokenString,yytext,MAXTOKENLEN);
 	//IF EOF encountered see if comment is open and pass error if so
-	return yylex();
+	return token;
 }
