@@ -1,27 +1,29 @@
 %{
 
+#define YYPARSER
 #include "globals.h"
 #include "util.h"
 #include "scan.h"
 #include "parse.h"
 
-#define YYPARSER
 #define YYSTYPE TreeNode *
 
 static char * savedName; 
 static int holdNum;
-static char *
 
 static int paramCounter = 0;
 static int localCounter = 0;
 static int currentlyGlobal = 1; 
+static TreeNode * savedTree;
+static ExpType savedExpType;
+static TokenType savedTokenType;
 
+int yylex();
+int yyerror(char * c);
 /*
 ---------- TO DO LIST ------------
-Figure out how parameters are going to work
+Figure out how parameters are going to work / arguments
 Initialize all the semantic variables at the right times
-Finish the last couple rule actions
-FTP over to linux and figure out how to build
 debug
 */
 
@@ -31,6 +33,7 @@ debug
 %token ASSIGN NQ EQ LT GT LE GE AND OR PLUS MINUS TIMES OVER LPAREN RPAREN SEMI COMMA LBRACK RBRACK LCBRACK RCBRACK
 %token ERROR
 %%
+
 program				: 	declaration-list
 						{
 							savedTree = $1;
@@ -46,50 +49,58 @@ declaration-list	:	declaration-list declaration
                      		$$ = $1; }
                      	else $$ = $2;
 	            	}
-					|	declaration {$$ = $1}
+					|	declaration {$$ = $1;}
 					;
-declaration 		:	var-declaration {$$ = $1}
-					|	fun-declaration {$$ = $1}
+declaration 		:	var-declaration {$$ = $1;}
+					|	fun-declaration {$$ = $1;}
 					;
-var-declaration		:	type-specifier ID {savedName = copyString(tokenString);} SEMI {
+var-declaration		:	type-specifier ID {savedName = copyString(tokenString);} SEMI
+					{
 						$$ = newDecNode(VarK);
-						$$ -> lineno = lineno;
-						$$ -> type = $1
+						$$ -> type = savedExpType;
 						$$ -> attr.name = savedName;
 					}
 					|	type-specifier ID {savedName = copyString(tokenString);}
 						 LBRACK NUM{holdNum = atoi(tokenString);} RBRACK SEMI 
 					{
-						$$ = newDecNode(VarK);
-						$$ -> isArray = 1;
-						$$ -> arraySize = 
-						$$ -> lineno = lineno;
-						$$ -> type = $1
-						$$ -> attr.value = holdNum
+						$$ = newDecNode(ArrayK);
+						$$ -> isArray = TRUE;
+						$$ -> type = savedExpType;
+						$$ -> attr.val = holdNum;
 						$$ -> attr.name = savedName;
 					}
 					;
-type-specifier		: 	INT {$$ = Integer;}
-					| 	VOID {$$ = Void}
+type-specifier		: 	INT {savedExpType =  Integer;}
+					| 	VOID {savedExpType =  Void;}
 					;
-fun-declaration 	:	type-specifier ID {savedName = copyString(tokenString);} LPAREN params RPAREN
+fun-declaration 	:	type-specifier ID {savedName = copyString(tokenString);} LPAREN params RPAREN compound-stmt
 					{
 						$$ = newDecNode(FunK);
-						$$ -> name = savedName;
-						$$ -> type = $1;
+						$$ -> attr.name = savedName;
+						$$ -> type = (ExpType) $1;
 						$$ -> child[0] = $5;
 						$$ -> child[1] = $7;
 					}
 					;
-params				:	param-list {$$ = $1}
-					|	VOID {$$ = Void}
+params				:	param-list {$$ = $1;}
+					|	VOID {$$ = Void;}
 					;
-param-list			:	param-list COMMA param {}
-					|	param {}
+param-list			:	param-list COMMA param
+					{  
+						YYSTYPE t = $1;
+                   		if (t != NULL){
+                   			while (t->sibling != NULL)
+                        		t = t->sibling;
+                     		t->sibling = $3;
+                     		$$ = $1; }
+                     	else $$ = $3;
+		            }
+					|	param {$$ = $1;}
 					;
 param 				:	type-specifier ID
 					{
-						$$ = new
+						$$ = newDecNode(VarK);
+						$$ -> type = savedExpType;
 					}
 					|	type-specifier ID LBRACK RBRACK
 					;
@@ -97,7 +108,7 @@ compound-stmt		:	LCBRACK local-declarations statement-list RCBRACK
 					{
 						$$ = newStmtNode(CompoundK);
 						$$ -> child[0] = $2;
-						$$ -> child[1] = $3
+						$$ -> child[1] = $3;
 					}
 					|	empty
 					;
@@ -137,14 +148,12 @@ expression-stmt		:	expression SEMI {$$ = $1;}
 selection-stmt		:	IF LPAREN expression RPAREN statement 
 					{
 						$$ = newStmtNode(IfK);
-						$$ -> lineno = lineno;
 						$$ -> child[0] = $3;
 						$$ -> child[1] = $5;
 					}
 					|	IF LPAREN expression RPAREN statement ELSE statement
 					{
 						$$ = newStmtNode(IfK);
-						$$ -> lineno = lineno;
 						$$ -> child[0] = $3;
 						$$ -> child[1] = $5;
 						$$ -> child[2] = $7;
@@ -153,7 +162,6 @@ selection-stmt		:	IF LPAREN expression RPAREN statement
 iteration-stmt		:	WHILE LPAREN expression RPAREN statement
 					{
 						$$ = newStmtNode(WhileK);
-						$$ -> lineno = lineno;
 						$$ -> child[0] = $3;
 						$$ -> child[1] = $5;
 					}
@@ -166,7 +174,6 @@ return-stmt			:	RETURN SEMI
 					| 	RETURN expression SEMI
 					{
 						$$ = newStmtNode(ReturnK);
-						$$ -> lineno = lineno;
 						$$ -> child[0] = $2;
 					}
 					;
@@ -181,86 +188,99 @@ expression 			:	var ASSIGN expression
 var 				: 	ID 
 						{
 							$$ = newExpNode(IdK);
-							$$ -> lineno = lineno;
-							$$ -> name = copyString(tokenString);
+							$$ -> attr.name = copyString(tokenString);
 						}
 					| 	ID {savedName = copyString(tokenString);} LBRACK expression RBRACK
 						{
 							$$ = newExpNode(IdK);
-							$$ -> lineno = lineno;
-							$$ -> name = savedName;
+							$$ -> attr.name = savedName;
 							$$ -> child[0] = $4;
 						}
 					;
 simple-expression 	: 	additive-expression relop additive-expression
 					{
-						$$ = newExpNode(Opk);
-						$$ -> attr.op = $2;
-						$$ -> lineno = lineno;
+						$$ = newExpNode(OpK);
+						$$ -> attr.op = savedTokenType;
 						$$ -> child[0] = $1;
 						$$ -> child[1] = $3;
 					}
 					| 	additive-expression {$$ = $1;}
 					;				
-relop				: 	LE {$$ = LE;}
-					|	LT {$$ = LT;}
-					|	GT {$$ = GT;}
-					|	GE {$$ = GE;}
-					|	EQ {$$ = EQ;}
-					|	NQ {$$ = NQ;}
+relop				: 	LE {savedTokenType = LE;}
+					|	LT {savedTokenType = LT;}
+					|	GT {savedTokenType = GT;}
+					|	GE {savedTokenType = GE;}
+					|	EQ {savedTokenType = EQ;}
+					|	NQ {savedTokenType = NQ;}
 					;
 additive-expression :	additive-expression addop term
 					{
 						$$ = newExpNode(OpK);
-						$$ -> lineno = lineno;
-						$$ -> attr.op = $2;
+						$$ -> attr.op = savedTokenType;
 						$$ -> child[0] = $1;
 						$$ -> child[1] = $3;
 					}
-					|	term {$$ = $1}
+					|	term {$$ = $1;}
 					;
-addop 				:	PLUS {$$ = PLUS;}
-					|	MINUS {$$ = MINUS;}
+addop 				:	PLUS {savedTokenType = PLUS;}
+					|	MINUS {savedTokenType = MINUS;}
 					;
 term				:	term mulop factor
-					| 	factor
+					{
+						$$ = newExpNode(OpK);
+						$$ -> attr.op = savedTokenType;
+						$$ -> child[0] = $1;
+						$$ -> child[1] = $3;
+					}
+					| 	factor {$$ = $1;}
 					;
-mulop				:	TIMES
-					| 	OVER
+mulop				:	TIMES {savedTokenType = TIMES;}
+					| 	OVER {savedTokenType = OVER;}
 					;
-factor				:	LPAREN expression RPAREN
-					|	var
-					|	call
-					|	NUM
+factor				:	LPAREN expression RPAREN {$$ = $2;}
+					|	var {$$ = $1;}
+					|	call {$$ = $1;}
+					|	NUM 
+					{
+						$$ = newExpNode(ConstK); 
+						$$ -> attr.val = atoi(tokenString);
+					}
 					;
-call				:	ID LPAREN args RPAREN
+call				:	ID {savedName = copyString(tokenString);} LPAREN args 						RPAREN
+				 	{
+				 		$$ = newStmtNode(CallK);
+				 		$$ -> attr.name = savedName;
+				 		$$ -> child[0] = $4;
+				 	}	
 					;
-args				:	arg-list
-					|	empty
+args				:	arg-list {$$ = $1;}
+					|	empty 
 					;
-args-list			:	arg-list COMMA expression
-					|	expression
+arg-list			:	arg-list COMMA expression
+					{  
+						YYSTYPE t = $1;
+                   		if (t != NULL){
+                   			while (t->sibling != NULL)
+                        		t = t->sibling;
+                     		t->sibling = $3;
+                     		$$ = $1; }
+                     	else $$ = $3;
+		            }					
+		            |	expression {$$ = $1;}
 					;	
-empty				: '' {$$ = NULL};				
-
-
-
+empty				: %empty {$$ = NULL;};	
 
 %%
 
 /* ------------ C CODE ----------------- */
 
 int yyerror(char * message)
-{ fprintf(output,"Syntax error at line %d: %s\n",lineno,message);
-  fprintf(output,"Current token: ");
+{ fprintf(listing,"Syntax error at line %d: %s\n",lineno,message);
+  fprintf(listing,"Current token: ");
   printToken(yychar,tokenString);
-  Error = TRUE;
   return 0;
 }
 
-static int yylex(void){ 
-	return getToken(firstTime);
-}
 
 TreeNode * parse(void){ 
 	yyparse();

@@ -28,10 +28,10 @@ int main( int argc, char ** argv){
     	source = fopen(argv[1], "r");
     }
     if (source==NULL){ 
-    	fprintf(stderr,"File %s not found\n",pgm);
+    	fprintf(stderr,"File not found\n");
     	exit(1);
  	}
- 	fprintf(output, "C- COMPILATION: %s\n", argv[1]);
+ 	fprintf(listing, "C- COMPILATION: %s\n", argv[1]);
 
  	//Scan the input file and get the tokens
  	int firstTime = 1;

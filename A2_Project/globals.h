@@ -9,9 +9,9 @@
 #define _GLOBALS_H_
 
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include <string.h>
 
 /* Yacc/Bison generates internally its own values
  * for the tokens. Other files can access these values
@@ -23,9 +23,8 @@
  */
 
 #ifndef YYPARSER
-
 /* the name of the following file may change */
-#include "y.tab.h"
+#include "a2.tab.h"
 
 /* ENDFILE is implicitly defined by Yacc/Bison,
  * and not included in the tab.h file
@@ -38,16 +37,16 @@
 /* MAXRESERVED = the number of reserved words */
 #define MAXRESERVED 10
 
-typedef enum 
+//typedef enum 
     /* book-keeping tokens */
-   {ENDFILE,ERROR,
+   //{ENDFILE,ERROR,
     /* reserved words */
-    IF,ELSE,WHILE,RETURN,VOID,BOOL,TRUE,FALSE,INT,NOT,
+    //IF,ELSE,WHILE,RETURN,VOID,BOOL,TRUE,FALSE,INT,NOT,
     /* multicharacter tokens */
-    ID,NUM,
+    //ID,NUM,
     /* special symbols */
-    ASSIGN,EQ,NQ,LT,GT,LE,GE,PLUS,MINUS,TIMES,OVER,LPAREN,RPAREN,SEMI,COMMA,LBRACK,RBRACK,LCBRACK,RCBRACK,AND,OR
-   } TokenType;
+    //ASSIGN,EQ,NQ,LT,GT,LE,GE,PLUS,MINUS,TIMES,OVER,LPAREN,RPAREN,SEMI,COMMA,LBRACK,RBRACK,LCBRACK,RCBRACK,AND,OR
+   //} TokenType;
 
 typedef int TokenType;
 extern FILE* source; /* source code text file */
@@ -132,3 +131,4 @@ extern int TraceCode;
 /* Error = TRUE prevents further passes if an error occurs */
 extern int Error; 
 #endif
+

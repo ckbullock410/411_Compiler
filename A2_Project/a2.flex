@@ -1,26 +1,31 @@
-%{
-/*	Chandler Bullock
-	Akal
-	CPSC411 Assignment #1	
-*/
+/****************************************************/
+/* File: CM.flex                                    */
+/* The lex specification for C-                     */
+/*                                                  */
+/****************************************************/
 
+%x COMMENT_MULTI_LINE
+%{
 #include "globals.h"
 #include "util.h"
 #include "scan.h"
+/* lexeme of identifier or reserved word */
+char tokenString[MAXTOKENLEN+1];
+char previousTokenString[MAXTOKENLEN+1];
 
-int commentOpen = 0;
-char tokenString[MAXTOKENLEN+1]
+
 %}
+
 digit       [0-9]
 number      {digit}+
 letter      [a-zA-Z]
 identifier  {letter}+
 newline     \n
 whitespace  [ \t]+
-OPENCOMM	"/*"
-CLOSECOMM	"*/"
-UNIDENTIFIED	.
+
+
 %%
+
 "bool"          {  return BOOL;}
 "if"            {  return IF;}
 "else"          {  return ELSE;}
@@ -48,31 +53,54 @@ UNIDENTIFIED	.
 ")"             {  return RPAREN;}
 ";"             {  return SEMI;}
 ","             {  return COMMA;}
-"["		        {  return LBRACK;}
-"]"		        {  return RBRACK;}
+"["		{  return LBRACK;}
+"]"		{  return RBRACK;}
 "{"             {  return LCBRACK;}
-"}"		        {  return RCBRACK;}
+"}"		{  return RCBRACK;}
 {number}        {  return NUM;}
 {identifier}    {  return ID;}
 {newline}       {lineno++;}
-{OPENCOMM}		{commentOpen = 1;}
-{CLOSECOMM}		{if (commentOpen == 1){commentOpen = 0;} else {printToken(ERROR,"Unmatched '*/'"); exit(1)}}
-{UNIDENTIFIED}	{printToken(ERROR, "Unidentified Symbol"); exit(1)}
 {whitespace}    {/* skip whitespace */}
-<<EOF>>			{if(commentOpen == 0) {return ENDFILE;} else {printToken(ERROR, "EOF in comment"); exit(1)}}
-%%
+<INITIAL>"/*"   {
+		  BEGIN(COMMENT_MULTI_LINE);
 
+		}
+<COMMENT_MULTI_LINE>"*/"	{
+				  BEGIN(INITIAL);
+				}
+<COMMENT_MULTI_LINE><<EOF>>	{
+				  printToken(ERROR,"EOF in comment");
+				  yyterminate();
 
-TokenType getToken(int firstTime){
-	TokenType token;
-	if (firstTime){
-	   firstTime = FALSE;
-	   lineno++;
-	   yyin = source;
-	   yyout = listing;
-	}
-	token = yylex();
-	strncpy(tokenString,yytext,MAXTOKENLEN);
-	//IF EOF encountered see if comment is open and pass error if so
-	return token;
+				}
+
+<COMMENT_MULTI_LINE>.		{
 }
+<COMMENT_MULTI_LINE>\n		{
+}
+
+.               {// printToken(ERROR,yytext);
+		  return ERROR;}
+
+%%
+int yywrap(){
+	return 1;
+}
+
+TokenType getToken(int firstTime)
+{ //static int firstTime = TRUE;
+  TokenType currentToken;
+  
+  if (firstTime)
+  {//fprintf(listing,"Flex has strated working!\n");  
+   firstTime = FALSE;
+   lineno++;
+   yyin = source;
+   yyout = listing;
+  }
+  currentToken = yylex();
+  strncpy(previousTokenString,tokenString,MAXTOKENLEN);
+  strncpy(tokenString,yytext,MAXTOKENLEN);
+  return currentToken;
+}
+
