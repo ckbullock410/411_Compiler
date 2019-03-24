@@ -1,0 +1,20 @@
+/* This is a multi-line comment 
+sample program in C- */
+
+int out;
+int a;
+
+int mulop (int n[], int m[])
+{
+ return n[0]*m[0];
+}
+void main (void) {
+ 
+ int n[3];
+ int m[4];
+ out = mulop(n,m);
+ output(out);
+} 
+
+
+
